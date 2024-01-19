@@ -1,0 +1,51 @@
+library(tidyverse)
+data<-read.csv('(주)강원랜드_무인 키오스크 일일 입장권 발매현황_20231231.csv')
+head(data)
+unique(data$오류.메세지.내용) %>% head()
+
+data[grep('확인시간',data$오류.메세지.내용),]$오류.메세지.내용<-'시간지연 및 이전 확인기록으로인해 발권이 불가합니다.'
+unique(data$오류.메세지.내용)
+data[data$오류.메세지.내용=='',]$오류.메세지.내용<-'오류없음'
+unique(data$오류.메세지.내용)
+apply(is.na(data),2,sum)
+unique(data$발매일자)
+unique(data$발매시간)
+unique(data$성별)
+
+str(data)
+library(lubridate)
+data$발매일자<-ymd(data$발매일자)
+data$오류.메세지.내용<-factor(data$오류.메세지.내용)
+data$발매시간 <- factor(data$발매시간, levels = c("6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "1"))
+str(data)
+
+datesum<-data %>% group_by(발매일자) %>% summarise(sum=sum(건수))
+ggplot(datesum,mapping=aes(x=발매일자,y=sum))+geom_line()+ggtitle('발매일자별 판매 건수')
+
+timesum<-data %>% group_by(발매시간) %>% summarise(sum=sum(건수))
+timesum<-rbind(timesum,timesum[1,])[-1,]
+timesum
+ggplot(timesum,mapping=aes(x=발매시간,y=sum,group=1))+geom_line()+ggtitle('발매시간별 판매 건수')
+
+datetimesum<-data %>% group_by(발매일자,발매시간) %>% summarise(sum=sum(건수))
+datetimesum
+datetimesum
+
+ggplot(datetimesum, aes(x = 발매시간, y = sum, group = 발매일자, color = 발매일자)) +
+  geom_line() +
+  labs(title = "날짜별 시간대별 판매량 선 그래프", x = "시간대", y = "판매량", color = "날짜") +
+  theme_minimal()
+
+plot(ts(datetimesum$sum))
+
+datesum$요일<-weekdays(datesum$발매일자)
+daysum<-datesum %>% group_by(요일) %>% summarise(sum=sum(sum))
+daysum$요일<-factor(daysum$요일,level=c('월요일','화요일','수요일','목요일','금요일','토요일','일요일'))
+ggplot(daysum,aes(x=요일,y=sum,group=1))+geom_line()
+
+
+data %>% group_by(성별) %>% summarise(sum=sum(건수))
+
+error<-data %>% group_by(오류.메세지.내용) %>% summarise(sum=sum(건수))
+error %>% arrange(desc(sum))
+
